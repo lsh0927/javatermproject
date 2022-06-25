@@ -1,0 +1,9 @@
+public class RSTServerRun {
+
+	   public static void main(String[] args) {
+	      RSTServer server = new RSTServer();
+	      server.startserver();
+
+	   }
+
+	}
