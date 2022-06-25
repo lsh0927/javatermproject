@@ -1,0 +1,131 @@
+package TeamProject;
+
+import java.io.*;
+import java.net.*;
+import java.util.ArrayList;
+
+public class RSTServer {
+	   static ArrayList<Thread> UserList = new ArrayList<Thread>();
+
+	   
+	   public void startserver() {
+	      int usernum=1;
+	      
+	      try {
+	         ServerSocket s = new ServerSocket(5000);
+	         
+	         while(true) {
+	            Socket incoming = s.accept();
+	            System.out.println("사용자 " + usernum +"입장");
+	            
+	            ThreadedRST thread = new ThreadedRST(this, incoming, usernum);
+	            UserList.add(thread);
+	            thread.start();
+	            
+	            usernum++;
+	            
+	         }
+	      } catch(Exception e) { System.out.println(e); }
+	   }
+	   public synchronized void sendAll(String msg) {
+	      for(int i=0; i<UserList.size();i++) {
+	         ThreadedRST thread = (ThreadedRST)UserList.get(i);
+	         thread.Send(msg);
+	      }
+	   }
+	   public synchronized void removeUser(Thread thread) {
+	      UserList.remove(thread);
+	   }
+	}
+	class ThreadedRST extends Thread {
+	   static ArrayList<User> timelist= new ArrayList<User>();
+	   RSTServer server;
+	   private Socket incoming;
+	   private int counter;
+	   private BufferedReader in;
+	   private PrintWriter out;
+	   
+	   static int peoplenum=0;
+	   static int readypeople=0;
+	   static int timenum=0;
+	   double min=9999;
+	   int winner;
+	   
+	   
+	   public ThreadedRST(RSTServer s, Socket i, int c) {
+	      server = s;
+	      incoming = i;
+	      counter = c;
+	      peoplenum++;
+	   }
+	   public void run() {
+	      try {
+	         in = new BufferedReader
+	               (new InputStreamReader(incoming.getInputStream()));
+	         out = new PrintWriter
+	               (incoming.getOutputStream(), true);
+	         out.println("사용자 "+counter);
+	         while(true) {
+	            String line = in.readLine();
+	            if(line.trim().equals("ready")) readypeople++; 
+	            else if(!line.trim().equals("ready")) {
+	               timenum++;
+	               double time=Double.parseDouble(line);
+	               timelist.add(new User(counter, time));
+	            }
+	      
+	            if(readypeople==peoplenum) {
+	               readypeople=0;
+	               server.sendAll("색깔이 바뀌면 클릭해주세요.");
+	               Random r = new Random();
+	               sleep(r.nextInt(3000));
+	               server.sendAll("start");
+	            
+	            }
+	            if(timenum==peoplenum) {
+	               
+	               for(int i=0; i<timelist.size();i++)
+	               {
+	                  if(timelist.get(i).getTime()<min)
+	                  {
+	                     min= timelist.get(i).getTime();
+	                     winner=i;
+	                  }
+	               }
+	               System.out.println(min);
+	               System.out.println("승리자 : 사용자 "+(winner+1));
+	            }
+	         }
+	         
+	         //
+	         
+	      } catch(IOException ioe) 
+	      { System.out.println("퇴장"); peoplenum--; server.removeUser(this);}
+	      catch(Exception e) {}
+	   
+	      finally{
+	         try{
+	            incoming.close();
+	         } catch (Exception e) {}
+	      }
+	   }
+	   
+	   public void Send(String msg) {
+	      out.println(msg);
+	   }
+	   
+	}
+	class User{
+	   int serial;
+	   double time;
+	   public User(int s, double t) {
+	      serial = s;
+	      time = t;
+	   }
+	   public double getTime() {
+	      return time;
+	   }
+	   public int getSerial() {
+	      return serial;
+	   }
+	}
