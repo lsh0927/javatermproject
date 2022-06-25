@@ -1,0 +1,148 @@
+package TeamProject;
+
+import java.io.*;
+import java.net.*;
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+
+public class RSTClient {
+
+	   public static void main(String[] args) {
+	      RSTGUI gui = new RSTGUI();
+	   }
+
+	}
+
+	class RSTGUI extends JFrame {
+	   private long starttime;
+	   private long finishtime;
+	   private long finaltime;
+	   private int startsignal=0;
+	   
+	   private JTextField myname=new JTextField("");
+	   private JTextArea userlist=new JTextArea("sc");
+	   private JTextField ReadyState=new JTextField("대기중입니다.");
+	   private JCheckBox ready = new JCheckBox("준비", false);
+	   private JTextArea any=new JTextArea("반응속도\n테스트 게임");
+	   
+	   Socket c;
+	   BufferedReader in;
+	   PrintWriter out;
+	   
+	   
+	   public RSTGUI() {
+	      
+	      //프레임 생성
+	      setTitle("ResponseSpeedTest");
+	      setSize(800,600);
+	      setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	      setVisible(true);
+	      Container container = getContentPane();
+	      container.setLayout(new GridLayout(1,3,5,5));
+	      
+	      
+	      //사용자 이름 및 스코어보드 배치
+	      JPanel textgroup = new JPanel();
+	      textgroup.setLayout(new BorderLayout());
+	      textgroup.add(myname,BorderLayout.NORTH);
+	      textgroup.add(userlist,BorderLayout.CENTER);
+	      container.add(textgroup);
+	      
+	      //메인 패널 배치
+	      RSTPanel RST = new RSTPanel();
+	      JPanel maingroup = new JPanel();
+	      ReadyState.setHorizontalAlignment(JTextField.CENTER);
+	      ready.setHorizontalAlignment(JCheckBox.CENTER);
+	      maingroup.setLayout(new GridLayout(3,1));
+	      maingroup.add(ReadyState);
+	      maingroup.add(RST);
+	      maingroup.add(ready);
+	      container.add(maingroup);
+	      
+	      ready.addItemListener(new ReadyListener());
+	      //디자인 상의 여백 공간 배치
+	      container.add(any);
+
+	      //서버와 통신
+	      try {
+	         c = new Socket("",5000);
+	         in = new BufferedReader
+	               (new InputStreamReader(c.getInputStream()));
+	         out = new PrintWriter
+	               (c.getOutputStream(),true);
+	         
+	         
+	         String name=in.readLine();
+	         System.out.println(name);
+	         myname.setText(name);
+	         
+	         while(true) {
+	            String line = in.readLine();
+	            if(line.trim().equals("색깔이 바뀌면 클릭해주세요.")) {
+	               
+	               ReadyState.setText(line);
+	            }
+	            if(line.trim().equals("start")) {
+	               startsignal=1;
+	               starttime=System.currentTimeMillis();
+	               RST.changecolor(startsignal);
+	               ready.setSelected(false);
+	            }
+	         }
+	         
+	         
+	            } catch (Exception e) {}      
+	      
+	   }
+	   private class ReadyListener implements ItemListener
+	   {
+	      public void itemStateChanged(ItemEvent event)
+	      {
+	         JCheckBox source = (JCheckBox)event.getSource();
+	         if(event.getStateChange()==ItemEvent.SELECTED) {
+	            out.println("ready");
+	            
+	         }
+	      }
+	      
+	   }
+	   
+	   class RSTPanel extends JPanel {
+	      
+	      public RSTPanel() {
+	         setBackground(Color.red);
+	         addMouseListener(new RTListener());
+	      }
+	      void changecolor(int i)
+	      {
+	         if(i==1)
+	            setBackground(Color.green);
+	         if(i==0)
+	            setBackground(Color.red);
+	      }
+	      private class RTListener extends MouseAdapter{
+	         public void mouseClicked(MouseEvent e) {
+	            
+	            if(startsignal==0) { 
+	               finaltime=100000;
+	               ReadyState.setText("너무 빨리 누르셨습니다. 탈락");
+	               
+	            }
+	            else {
+	               ReadyState.setText("결과를 기다리는 중입니다.");
+	               finishtime= System.currentTimeMillis(); 
+	               finaltime=  finishtime-starttime;
+	               
+	               changecolor(0);
+	               any.append("\n"+(double)finaltime/1000);
+	            
+	            }
+	            removeMouseListener(this);
+	          
+	            out.println(finaltime);
+	            
+	         }
+	      }
+	   }
+	}
